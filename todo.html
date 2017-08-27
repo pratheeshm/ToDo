@@ -8,88 +8,151 @@
 	type = "text/javascript"></script>
 	<script src = "https://cdnjs.cloudflare.com/ajax/libs/backbone.js/0.9.2/backbone-min.js"
 	type = "text/javascript"></script>
+	<script src="http://cdnjs.cloudflare.com/ajax/libs/backbone-localstorage.js/1.0/backbone.localStorage-min.js" type="text/javascript"></script>
 	<link rel="stylesheet" type="text/css" href="styles.css">
 </head>
 <body>
 	<header>
-	<div>TO DO</div>
+		<div>TO DO</div>
 	</header>
 	<div id="toDoContainer">
 		<input type="text" name="" placeholder="What's On Your Mind" id="toDoInput">
+		<div id="container">
+		
+
 	</div>
+	<div id="todoComplete">Completed
+		<div id="container2">
+			
+		</div>
+		</div>
+	</div>
+	
 	<script type="text/template" id="template">
 		<div class="todo-model" id="toDoModel">
-			<div ><%- text %></div>
-			<input type="checkbox" name="completed" id="check">
+			<div id="text"><%- text %></div>
+			<input type="checkbox" name="" id="check">
+			<button id="edit">edit</button>
+			<button id="update" class="hide" class="show">update</button>
+			<button id="remove">remove</button>
 		</div>
 	</script>
-	<script type="text/javascript">
-		    'use strict';
-
-
-	var item= Backbone.Model.extend({
-		defaults:{
-			text: "",
-			completed:false
-		}
-	});
-	
-	var list=Backbone.Collection.extend({
-		model:item,
-		
-
-	});
-	
-	var listItem= new list();
-	
-	var modelView=Backbone.View.extend({
-		//el:"#toDoModel",
-		tagName:"div",
-		model:{},
-		template:_.template($("#template").html()),
-		render:function(){
-			
-		
-			this.$el.html(this.template(this.model.toJSON()));
-			return this;
-		}
-	});
-	var todoView=Backbone.View.extend({
-		el:"#toDoContainer",
-		ob:{},
-		template:_.template(this.$("#template").html()),
-		events:{
-			"keypress #toDoInput" : "createTodo"
-		},
-		initialize:function(){
-			listItem.on("add",this.addOne,this);
-			
-			
-		},
-		createTodo:function(e){
-			
-			if( e.which!=13 || ! $("#toDoInput").val().trim() ){
-				return;
-			}
-		 	var a=this.createAttributes();
-			listItem.add(a);
-			$("#toDoInput").val("");
-		},
-		
-		createAttributes:function(){
-			return{
-				text:$("#toDoInput").val().trim(),
-				completed:false
-			}
-		},
-		addOne:function(it){
-		var view= new modelView({model:it});
-		
-		$("#toDoContainer").append(view.render().el)
-		
-		}
-	});
-	var todoview = new todoView();
+	<script type="text/template" id="template-complete">
+		<div> <%- text %></div>
 	</script>
-</body>
-</html>
+	<script type="text/javascript">
+		'use strict';
+		    //todo model
+		    var toDoModel=Backbone.Model.extend({
+		    	defaults:{
+		    		text:"",
+		    		completed:false
+		    	}
+		    });
+
+		    // collection of todos
+
+		    var toDoModels=Backbone.Collection.extend({
+		    });
+		    var list=new toDoModels();
+		    var completedList=new toDoModels();
+		    var completeToDoView=Backbone.View.extend({
+		    	model:new toDoModel(),
+		    	tagName:'div',
+		    	template:_.template($("#template-complete").html()),
+		    	render:function(){
+		    		this.$el.html(this.template(this.model.toJSON()));
+		    		return this;
+		    	}
+		    });
+		    // single todo view
+		    var todoView=Backbone.View.extend({
+		    	model:new toDoModel(),
+		    	tagName:'div',
+		    	events:{
+		    		"click #remove" : "destroy",
+		    		"click #edit" 	:"edit",
+		    		"click #update" :"update",
+		    		"click #check" 	: "check"
+		    	},
+		    	check:function(){
+		    		if(this.$("#check").is(":checked")){
+		    			completedList.add(this.model);
+		    			this.model.destroy();
+		    		}
+		    	},
+		    	initialize:function(){
+		    		this.model.on("destroy",this.remove,this);
+		   	    	},
+		    	template:_.template($("#template").html()),
+		    	render:function(){
+		    		this.$el.html(this.template(this.model.toJSON()));
+		    		return this;
+		    	},
+		    	destroy:function(){
+		    		this.model.destroy();
+		    	},
+		    	edit:function(){
+		    		this.$("#remove").hide();
+		    		this.$("#update").toggle();
+		    		this.$("#edit").hide();
+		    		var txt=this.$("#text").html();
+		    		this.$("#text").html('<input type="text" value="' + txt +'" id="newText">');
+
+		    	},
+		    	update:function(){
+		    		this.$("#remove").show();
+		    		this.$("#edit").show();
+		    		this.$("#update").toggle();
+		    		this.model.set("text",$("#newText").val());
+		    	}
+
+		    });
+
+		    // models view
+
+		    var modelsView=Backbone.View.extend({
+		    	model:list,
+		    	modelNew:completedList,
+		    	el:"#toDoContainer",
+		    	initialize:function(){
+		    		this.model.on("add",this.render,this);
+		    		this.modelNew.on("add",this.render,this);
+		    		this.modelNew.on("change",this.render,this);
+					this.model.on("change",this.render,this);
+		    	},
+		    	events:{
+		    		"keypress #toDoInput" : "createTodo"
+
+		    	},
+		    	createTodo:function(e){
+
+		    		if( e.which!=13 || ! $("#toDoInput").val().trim() ){
+		    			return;
+		    		}
+		    		var a=this.createAttributes();
+		    		list.add(a);
+		    		$("#toDoInput").val("");
+		    	},
+		    	createAttributes:function(){
+		    		return{
+		    			text:$("#toDoInput").val().trim(),
+		    			completed:false
+		    		}
+		    	},
+		    	render:function(){
+		    		var self=this;
+		    		$("#container").html("");
+		    		_.each(this.model.toArray(),function(toDoModel){
+		    		$("#container").append(new todoView({model:toDoModel}).render().$el);
+		    		});
+
+					_.each(this.modelNew.toArray(),function(completeModel){
+		    		$("#container2").append(new completeToDoView({model:completeModel}).render().$el)});
+		    		return this;
+		    	}
+		    });
+		    var modelsview = new modelsView();
+		</script>
+	</body>
+	</html>
